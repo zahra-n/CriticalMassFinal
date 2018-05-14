@@ -24,7 +24,7 @@ import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.opengis.feature.simple.SimpleFeature;
 
-import firstExample.ZahraUtility;
+import extra.ZahraUtility;
 import population.RandomPopulation;
 
 public class YarraRangesPercentPop {
