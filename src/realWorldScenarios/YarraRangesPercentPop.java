@@ -1,7 +1,9 @@
+/*=================================================================================================================
+ * This is to investigate the probability of a vehicle-passenger matching system in a real world scenario,
+ * focusing on the critical mass frontier.
+ =================================================================================================================*/
 package realWorldScenarios;
-/*
- * in this class the passenger loop happens only once and everything is calculate there
- */
+
 import java.awt.Point;
 import java.awt.Toolkit;
 import java.io.BufferedWriter;
@@ -14,7 +16,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
-
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.simple.SimpleFeatureIterator;
@@ -23,7 +24,6 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.opengis.feature.simple.SimpleFeature;
-
 import extra.ZahraUtility;
 import population.RandomPopulation;
 
@@ -106,15 +106,17 @@ public class YarraRangesPercentPop {
 		double utility;
 		int neighbour;
 		int capacity;
+		int areaCode;
 		
 		
-		public Vehicle(int id, Point coordinate, double utility, int neighbour, int capacity) {
+		public Vehicle(int id, Point coordinate, double utility, int neighbour, int capacity, int areaCode) {
 			super();
 			this.id = id;
 			this.coordinate = coordinate;
 			this.utility = utility;
 			this.neighbour = neighbour;
 			this.capacity = capacity;
+			this.areaCode = areaCode;
 		}
 		
 		public int getId() {
@@ -152,9 +154,17 @@ public class YarraRangesPercentPop {
 			this.capacity = capacity;
 		}
 
+		public int getAreaCode() {
+			return areaCode;
+		}
+
+		public void setAreaCode(int areaCode) {
+			this.areaCode = areaCode;
+		}
+
 		@Override
 		public String toString() {
-			return  id + "," + coordinate.x + "," + coordinate.y + "," + utility + "," + capacity + "," + neighbour;
+			return  id + "," + coordinate.x + "," + coordinate.y + "," + utility + "," + areaCode + "," + capacity + "," + neighbour;
 		}
 				
 	}
@@ -168,26 +178,12 @@ public class YarraRangesPercentPop {
 	public static void main(String[] args) throws IOException {
 		// TODO Auto-generated method stub
 		
-		long startTime = System.currentTimeMillis();
-		
-		int probability = 0; //counting successful instances
-		int prob5Per = 0;
-		int prob10Per = 0;
-		int prob15Per = 0;
-		int prob20Per = 0;
-		int allIterations = 0; // counting all instances
-		
-		double reachMeasure = 100; // in meter
-		String vehDist = "U";
-		String mainFolder = "YarraRanges";
-		
-
-		//=================================== required inputs for vehicle generation =======================================
-		
-//		Random rndOD = new Random();
+		/*
+		 * this method creates random points within the boundary of a given shapefile
+		 */
 		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(TransformationFactory.WGS84,"EPSG:28355");
-		String sa3Name = "Yarra Ranges";
-		String zonesFile = "G:\\My Drive\\1-PhDProject\\CriticalMass\\GM-MB\\LivableYarraRanger_SA2_Disso.shp";
+		//String sa3Name = "Yarra Ranges";
+		String zonesFile = "G:\\My Drive\\1-PhDProject\\CriticalMass\\GM-MB\\LivableYarraRanger_SA2.shp";
 		File dataFile = new File(zonesFile);
         dataFile.setReadOnly();
 		FileDataStore store = FileDataStoreFinder.getDataStore(dataFile);;
@@ -201,7 +197,7 @@ public class YarraRangesPercentPop {
 				{
 					// get feature
 					SimpleFeature ft = it.next(); //A feature contains a geometry (in this case a polygon) and an arbitrary number
-					featureMap.put((String) ft.getAttribute("SA3_NAME16") , ft ) ;
+					featureMap.put((String) ft.getAttribute("SA2_MYCODE") , ft ) ;
 				}
 				it.close();
 				store.dispose();
@@ -211,295 +207,305 @@ public class YarraRangesPercentPop {
 				throw new RuntimeException(ee) ;
 			}
 		}
-		//============================================= Passengers Generation ============================================================
-		
-		//As the passengers are fixed through all iterations we create them here
-		//generating the population and reading their locations from the created file in RandomPopulation
-		String [][] population = ZahraUtility.Data(22035, 3 , "G:\\My Drive\\1-PhDProject\\CriticalMass\\GM-MB\\YarraRangesPop10%.csv");//33515
-		ArrayList<Passenger> passengers = new ArrayList <Passenger>();
-		
-		for (int i = 1 ; i < population.length ; i++)
+		/*
+		 * A loop for investigating the success probability with different number of vehicles.
+		 * Number of vehicles is given as units/area and should be multiplied by the area in each suburb. 
+		 */
+		for (int vehicleN = 10; vehicleN < 11 ; vehicleN+=20)
 		{
-			Point passengerCoord = new Point();
-			passengerCoord.setLocation(Double.parseDouble(population[i][1]), Double.parseDouble(population[i][2]));
-			Passenger tempPassenger = new Passenger (i, passengerCoord, 0.0, 0, 0, -1);
-			passengers.add(tempPassenger);
-		}
-		
-		//===================================================================================================================
-		int v = 20000;
-		for (int probIteration = 1 ; probIteration <= 10 ; probIteration++)
-		{
-			int vehAddedInIteration = 22500; //CHANGE THE v TOO
+			long startTime = System.currentTimeMillis();
 			
-			long ProbStartTime = System.currentTimeMillis();
-			String dir = mainFolder + "\\V" + vehDist + v + "\\" + probIteration + "\\" ;
-			double potentialUtil = 5.0;
-			double vehUtilThres = 2.0;
-			double passUtilThres = 2.0;
-			int iterations = 100;
-			int iterationWrite = 100;
-			int vehicleCapacity = 1;
-			int passInterestThres = 5;
-			int interestedPassengers = 0;
-			Files.createDirectories(Paths.get(dir));
-			File log = new File(dir + "aggregated-YarraRanges" + "-V" + v + vehDist + "-" + vehicleCapacity + "C" + ".csv" );
-			FileWriter fileWriter = new FileWriter(log, false);
-			BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-			bufferedWriter.write("Iteration,Passengers' mean utility,Vehicles' mean utility,"
-					+ "% Interested passengers,% Matched passengers,% Matched Vehicles,"
-					+ "Interested passengers,Matched passengers,Matched Vehicles,Total Vehicles\n");
+			double reachMeasure = 100; // in meter
+			String vehDist = "U";
+			String mainFolder = "YarraRanges";
+			int probability = 0; //counting successful instances
+			int prob5Per = 0;
+			int prob10Per = 0;
+			int prob15Per = 0;
+			int prob20Per = 0;
+			int allIterations = 0; // counting all instances
 			
+	
+			//============================================= Passengers Generation ============================================================
 			
-//			//========================================================================================
-//			/*
-//			 * here we randomly add interest to a percentage of the passengers 
-//			 */
-//			
-//			for (int intrst = 0 ; intrst < passengers.size() * 0.1 ; intrst++ )
-//			{
-//				Random rnd = new Random();
-//				int randomID = rnd.nextInt(passengers.size());
-//				passengers.get(randomID).setInterest(1);
-//			}
-//			System.out.println(passengers.size() * 0.1);
-//			
-//			File pasLog = new File(dir + "passengers-YarraRanges" + "-V"
-//					+ vehAddedInIteration + vehDist + "-" + vehicleCapacity + "C" + ".csv");
-//			FileWriter pasFileWriter = new  FileWriter(pasLog, false);
-//			BufferedWriter pasBufferedWriter = new BufferedWriter(pasFileWriter);
-//			pasBufferedWriter.write("Passenger_ID,X,Y,Utility,Neighbours,Interest"+ "\n");
-//			for (int i = 0 ; i < passengers.size(); ++i)
-//				pasBufferedWriter.write(passengers.get(i).toString() + "\n");
-//			pasBufferedWriter.close();
+			//As the passengers are fixed through all iterations we create them here
+			//generating the population and reading their locations from the created file in population.RandomPopulation
+			String populationFile = "G:\\My Drive\\1-PhDProject\\CriticalMass\\GM-MB\\YarraRangesPop10%.csv";
+			String [][] population = ZahraUtility.Data(22035, 3 , populationFile);//10637 , 22035 , 33515 , 44843
+			ArrayList<Passenger> passengers = new ArrayList <Passenger>();
 			
-			//========================================================================================
-			
-			if (probIteration == 10)
+			for (int i = 1 ; i < population.length ; i++)
 			{
-				iterations = 1000;
-				iterationWrite = 200;
- 			}
+				Point passengerCoord = new Point();
+				passengerCoord.setLocation(Double.parseDouble(population[i][1]), Double.parseDouble(population[i][2]));
+				Passenger tempPassenger = new Passenger (i, passengerCoord, 0.0, 0, 0, -1);
+				passengers.add(tempPassenger);
+			}
 			
-			ArrayList<Vehicle> vehicles = new ArrayList <Vehicle>();
-
-			//iterations
-			for (int k = 1 ; k <= iterations ; k++)
+			//===================================================================================================================
+			/*
+			 * list of all suburbs' areas
+			 */
+			double [] suburbAreas = {55.63574914190,22.19696304080,232.43290281300,8.24012521616,109.34846500900,68.53161985960,10.54029548460,12.54057745180,81.87535440880,16.98459828370,8.88881827658,111.71652418300,301.29947703600};
+					
+			for (int probIteration = 1 ; probIteration <= 10 ; probIteration++)
 			{
-				
-				interestedPassengers = 0;
-				double passengerUtilSum = 0.0;
-				double vehicleUtilSum = 0.0;
-				int matchedPassengers = 0 ;
-//				int unmatchedVehicles = 0;
-				
-				
-				//generating the vehicles to add in this iteration with a uniform distribution
-				int startingID = -1; // this is necessary to have unique id for vehicles through all iterations
-				if (vehicles.size() > 0)
-					startingID = vehicles.get(vehicles.size()- 1).id;
-				
-				for (int i = startingID + 1 ; i <= startingID + vehAddedInIteration ; i++ )
+				/*
+				 * A list of number of vehicles for each suburb, which is modified in each iteration based
+				 * on the average utility of that suburb
+				 */
+				int [] vehicleNumber = {vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN,vehicleN};
+				for (int suburbCode = 0 ; suburbCode < 13 ; suburbCode++)
 				{
-					Random rndOD = new Random();
-					Point vehicleCoord = new Point();
-					Coord originCoord = RandomPopulation.createRandomCoordinateInCcdZone(rndOD,featureMap ,sa3Name, ct);
-					vehicleCoord.setLocation(originCoord.getX(), originCoord.getY());
-					Vehicle tempVehicle = new Vehicle (i, vehicleCoord, 0.0, 0, vehicleCapacity);
-					vehicles.add(tempVehicle);
+					vehicleNumber [suburbCode] = (int) ( vehicleN * suburbAreas[suburbCode]);
 				}
+	
+				long ProbStartTime = System.currentTimeMillis();
+				String dir = mainFolder + "\\V" + vehDist + vehicleN + "\\" + probIteration + "\\" ;
+				double potentialUtil = 5.0;
+				double vehUtilThres = 2.0;
+				double vehUtilThres2 = 3.0;
+				double passUtilThres = 2.0;
+				int iterations = 100;
+				int iterationWrite = 100;
+				int vehicleCapacity = 1;
+				int passInterestThres = 5;
+				int interestedPassengers = 0;
+				Files.createDirectories(Paths.get(dir));
+				String aggregatedFile = "aggregated-YarraRanges" + "-V" + vehicleN + vehDist + "-" + vehicleCapacity + "C" + ".csv";
+				BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(new File(dir +  aggregatedFile), false));
+				bufferedWriter.write("Iteration,Passengers' mean utility,Vehicles' mean utility,"
+						+ "% Interested passengers,% Matched passengers,% Matched Vehicles,"
+						+ "Interested passengers,Matched passengers,Matched Vehicles,Total Vehicles\n");
+	
+				// in the last probability iteration extra iterations are run to see the long time effect
+				if (probIteration == 10)
+				{
+					iterations = 1000;
+					iterationWrite = 200;
+	 			}
 				
-				//========================================================================================
-				//
-				for (int i = 0 ; i < passengers.size() ; i++ )
+				ArrayList<Vehicle> vehicles = new ArrayList <Vehicle>();
+	
+				/*
+				 * the functionality in the iterations in mainly similar to the one in 
+				 * artificialEnvironment.NormalDistDynamicFleetProb, with one main difference:
+				 * Here instead of one pool for all vehicles we have 13 (number of suburbs) pools of vehicle.
+				 * Each pool acts independently in terms of changing their size (i.e. average utility of vehicles,
+				 * in each suburb is calculated separately and the size of fleet to be added in the next iteration
+				 * is modified accordingly), while passengers can be matched with vehicles from any suburb.
+				 */
+				//iterations
+				for (int k = 1 ; k <= iterations ; k++)
 				{
 					
-					passengers.get(i).setMtcheVehID(-1);
-					passengers.get(i).setNeighbour(0);
-//					if (k > 1 )
-					passengers.get(i).setInterest(0);
+					interestedPassengers = 0;
+					double passengerUtilSum = 0.0;
+					double [] vehicleUtilSum = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+					int [] suburbsVehNum = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+					int matchedPassengers = 0 ;
 					
 					
-					Point passengerCoord = passengers.get(i).coordinate;
-					double finalDist = reachMeasure + 10;
+					//generating the vehicles to add in this iteration with a uniform distribution
+					int startingID = -1; // this is necessary to have unique id for vehicles through all iterations
+					if (vehicles.size() > 0)
+						startingID = vehicles.get(vehicles.size()- 1).id;
 					
-					for (int j = 0 ; j < vehicles.size() ; j++ )
+					for (Integer suburbCode = 0 ; suburbCode < 13 ;  suburbCode++)
+					{
+						for (int i = startingID + 1 ; i <= startingID + vehicleNumber[suburbCode] ; i++ )
+						{
+							Random rndOD = new Random();
+							Point vehicleCoord = new Point();
+							Coord originCoord = RandomPopulation.createRandomCoordinateInCcdZone(rndOD,featureMap ,suburbCode.toString(), ct);
+							vehicleCoord.setLocation(originCoord.getX(), originCoord.getY());
+							Vehicle tempVehicle = new Vehicle (i, vehicleCoord, 0.0, 0, vehicleCapacity, suburbCode);
+							vehicles.add(tempVehicle);
+						}
+						
+						startingID  += vehicleNumber[suburbCode] ;
+					}
+					//========================================================================================
+					//
+					for (int i = 0 ; i < passengers.size() ; i++ )
 					{
 						
-						Point vehicleCoord = vehicles.get(j).coordinate;
+						passengers.get(i).setMtcheVehID(-1);
+						passengers.get(i).setNeighbour(0);
+						passengers.get(i).setInterest(0);
 						
-						if (Math.abs(passengerCoord.getX() - vehicleCoord.getX()) <= reachMeasure && Math.abs(passengerCoord.getY() - vehicleCoord.getY()) <= reachMeasure )
+						
+						Point passengerCoord = passengers.get(i).coordinate;
+						double finalDist = reachMeasure + 10;
+						
+						for (int j = 0 ; j < vehicles.size() ; j++ )
 						{
-							double distance = passengerCoord.distance( vehicleCoord );
 							
-							if (distance < reachMeasure)
+							Point vehicleCoord = vehicles.get(j).coordinate;
+							
+							if (Math.abs(passengerCoord.getX() - vehicleCoord.getX()) <= reachMeasure && Math.abs(passengerCoord.getY() - vehicleCoord.getY()) <= reachMeasure )
 							{
-								passengers.get(i).neighbour++;
+								double distance = passengerCoord.distance( vehicleCoord );
 								
-								if (distance < finalDist && vehicles.get(j).capacity > 0)
+								if (distance < reachMeasure)
 								{
-									finalDist = distance;
-									passengers.get(i).setMtcheVehID(j);	
+									passengers.get(i).neighbour++;
+									
+									if (distance < finalDist && vehicles.get(j).capacity > 0)
+									{
+										finalDist = distance;
+										passengers.get(i).setMtcheVehID(j);	
+									}
 								}
 							}
+						}// end of vehicle loop
+						
+						if (passengers.get(i).neighbour > passInterestThres || passengers.get(i).utility > passUtilThres )
+						{
+							passengers.get(i).setInterest(1);
+							interestedPassengers++;
 						}
-					}// end of vehicle loop
+						
+						//here the utility is reset to 0 because the interest based on the previous example is already calculated
+						passengers.get(i).setUtility(0.0);
+						
+						if ( passengers.get(i).getInterest() == 1 && passengers.get(i).mtcheVehID > -1)//
+						{					
+							double util = (reachMeasure - finalDist) / reachMeasure * potentialUtil;
+							passengers.get(i).setUtility(util);
+							vehicles.get(passengers.get(i).mtcheVehID).setUtility(util);
+							vehicles.get(passengers.get(i).mtcheVehID).capacity-- ;
+							matchedPassengers++;
+						}
 					
-					if (passengers.get(i).neighbour > passInterestThres || passengers.get(i).utility > passUtilThres )
+						passengerUtilSum += passengers.get(i).utility;
+		
+						
+					}// end of passenger loop
+					
+					
+					for (int i = 0 ; i < vehicles.size() ; i++)
 					{
-						passengers.get(i).setInterest(1);
-						interestedPassengers++;
+						vehicleUtilSum [vehicles.get(i).areaCode] += vehicles.get(i).utility;
+						suburbsVehNum [vehicles.get(i).areaCode] += 1;
 					}
 					
-					//here the utility is reset to 0 because the interest based on the previous example is already calculated
-					passengers.get(i).setUtility(0.0);
 					
-					if ( passengers.get(i).getInterest() == 1 && passengers.get(i).mtcheVehID > -1)//
-					{					
-						double util = (reachMeasure - finalDist) / reachMeasure * potentialUtil;
-						passengers.get(i).setUtility(util);
-						vehicles.get(passengers.get(i).mtcheVehID).setUtility(util);
-						vehicles.get(passengers.get(i).mtcheVehID).capacity-- ;
-						matchedPassengers++;
-					}
-				
-					passengerUtilSum += passengers.get(i).utility;
+					
+					//==================== calculating the mean utility ====================
 	
+					if (k % iterationWrite == 0 || k == 1 )
+					{
+	
+						StringBuilder fileContentP = new StringBuilder();
+						StringBuilder fileContentV = new StringBuilder();
+						
+						fileContentP.append("Iteration,Passenger_ID,X,Y,Utility,Neighbours,Interest"+ "\n");
+						for (int i = 0 ; i < passengers.size(); ++i)
+							fileContentP.append(k + "," + passengers.get(i).toString() + "\n");
+						
+						fileContentV.append("Iteration,Vehicle_ID,X,Y,Utility,Area_Code,Capacity,Neighbours" + "\n");
+						for (int i = 0 ; i < vehicles.size(); ++i)
+							fileContentV.append(k + "," +vehicles.get(i).toString() + "\n");
+						
+						ZahraUtility.write2File(fileContentP.toString(), dir + k + "-passengers-YarraRanges" 
+								+ "-V" + vehicleN + vehDist + "-" + vehicleCapacity + "C" + ".csv");
+						ZahraUtility.write2File(fileContentV.toString(), dir + k + "-vehicles-YarraRanges" + "-V" 
+								+ vehicleN + vehDist + "-" + vehicleCapacity + "C" + ".csv");
+					}
 					
-				}// end of passenger loop
-				
-				
-				for (int i = 0 ; i < vehicles.size() ; i++)
-				{
-					vehicleUtilSum += vehicles.get(i).utility;
-				}
-				
-				//========================================================================================
-				
-//				if (k % iterationWrite == 0 || k == 1 )
-//				{
-//					File passLog = new File(dir + k + "-passengers-YarraRanges" + "-V"
-//							+ vehAddedInIteration + vehDist + "-" + vehicleCapacity + "C" + ".csv");
-//					FileWriter passFileWriter = new  FileWriter(passLog, false);
-//					BufferedWriter passBufferedWriter = new BufferedWriter(passFileWriter);
-//					passBufferedWriter.write("Iteration,Passenger_ID,X,Y,Utility,Neighbours,Interest"+ "\n");
-//					for (int i = 0 ; i < passengers.size(); ++i)
-//						passBufferedWriter.write(k + "," + passengers.get(i).toString() + "\n");
-//					passBufferedWriter.close();
-//					
-//					File vehLog = new File(dir + k + "-vehicles-YarraRanges" + "-V" 
-//							+ vehAddedInIteration + vehDist + "-" + vehicleCapacity + "C" + ".csv");
-//					FileWriter vehFileWriter = new FileWriter(vehLog, false);
-//					BufferedWriter vehBufferedWriter = new BufferedWriter(vehFileWriter);
-//					vehBufferedWriter.write("Iteration,Vehicle_ID,X,Y,Utility,Capacity,Neighbours" + "\n");
-//					for (int i = 0 ; i < vehicles.size(); ++i)
-//						vehBufferedWriter.write(k + "," +vehicles.get(i).toString() + "\n");
-//					vehBufferedWriter.close();
-//				}
-				
-				
-				//==================== calculating the mean utility ====================
-
-				if (k % iterationWrite == 0 || k == 1 )
-				{
-
-					StringBuilder fileContentP = new StringBuilder();
-					StringBuilder fileContentV = new StringBuilder();
+					double meanPassengersUtil = passengerUtilSum / passengers.size();
 					
-					fileContentP.append("Iteration,Passenger_ID,X,Y,Utility,Neighbours,Interest"+ "\n");
-					for (int i = 0 ; i < passengers.size(); ++i)
-						fileContentP.append(k + "," + passengers.get(i).toString() + "\n");
+					double [] meanVehUtil = {0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+					for (int suburbCode = 0 ; suburbCode < 13 ; suburbCode++)
+				    {
+						meanVehUtil[suburbCode] = vehicleUtilSum [suburbCode] / suburbsVehNum [suburbCode];
+	//					System.out.println(suburbCode + ": " + meanVehUtil[suburbCode]);
+				    }
+					double matchedPassPercent = (double) matchedPassengers/passengers.size() * 100;
+					double matchedVehPercent = (double) matchedPassengers /vehicles.size() * 100; 
 					
-					fileContentV.append("Iteration,Vehicle_ID,X,Y,Utility,Capacity,Neighbours" + "\n");
-					for (int i = 0 ; i < vehicles.size(); ++i)
-						fileContentV.append(k + "," +vehicles.get(i).toString() + "\n");
-					
-					ZahraUtility.write2File(fileContentP.toString(), dir + k + "-passengers-YarraRanges" 
-							+ "-V" + v + vehDist + "-" + vehicleCapacity + "C" + ".csv");
-					ZahraUtility.write2File(fileContentV.toString(), dir + k + "-vehicles-YarraRanges" + "-V" 
-							+ v + vehDist + "-" + vehicleCapacity + "C" + ".csv");
-				}
-				
-				double meanPassengersUtil = passengerUtilSum / passengers.size();
-				double meanVehUtil = vehicleUtilSum / (vehicles.size() );
-				
-				double matchedPassPercent = (double) matchedPassengers/passengers.size() * 100;
-				double matchedVehPercent = (double) matchedPassengers /vehicles.size() * 100; 
-				
-				bufferedWriter.write(k + "," + meanPassengersUtil + "," + meanVehUtil + "," 
-						+ (double)interestedPassengers/passengers.size() * 100 + "%," 
-						+  matchedPassPercent + "%," + matchedVehPercent + "%," + interestedPassengers 
-						+ "," + matchedPassengers + "," + matchedPassengers + "," 
-						+ vehicles.size() + "\n");
+					bufferedWriter.write(k + "," + meanPassengersUtil + "," + meanVehUtil + "," 
+							+ (double)interestedPassengers/passengers.size() * 100 + "%," 
+							+  matchedPassPercent + "%," + matchedVehPercent + "%," + interestedPassengers 
+							+ "," + matchedPassengers + "," + matchedPassengers + "," 
+							+ vehicles.size() + "\n");
+					    
+					    
+					//=============== vehicles with utility lower than a certain threshold leave ===============
+				    for (int i = 0 ; i < vehicles.size(); i ++)
+				    {
+				    	if (vehicles.get(i).utility < vehUtilThres)
+				    	{
+				    		vehicles.remove(i);
+				    		i--;
+				    	}
+				    	else
+				    	{
+				    		vehicles.get(i).setUtility(0.0);
+							vehicles.get(i).setCapacity(vehicleCapacity);
+							vehicles.get(i).setId(i);
+				    	}
+				    	
+				    }
+				    
+				    for (int suburbCode = 0 ; suburbCode < 13 ; suburbCode++)
+				    {
+				    	if(meanVehUtil [suburbCode] <= vehUtilThres)
+							vehicleNumber [suburbCode] *= 0.9;
+	//			    	else if (meanVehUtil [suburbCode] > vehUtilThres2)
+	//			    		vehicleNumber [suburbCode] *= 1.1;
+				    }
 				    
 				    
-				//=============== vehicles with utility lower than a certain threshold leave ===============
-			    for (int i = 0 ; i < vehicles.size(); i ++)
-			    {
-			    	if (vehicles.get(i).utility < vehUtilThres)
-			    	{
-			    		vehicles.remove(i);
-			    		i--;
-			    	}
-			    	else
-			    	{
-			    		vehicles.get(i).setUtility(0.0);
-						vehicles.get(i).setCapacity(vehicleCapacity);
-						vehicles.get(i).setId(i);
-			    	}
-			    	
-			    }
+				    System.out.println("It." + probIteration + "." + k);				
+				}// end of iterations
+				
+				if (interestedPassengers > 0) 
+			    	probability++ ;
+			    if (interestedPassengers >= 0.05 * passengers.size())
+			    	prob5Per++ ;
+			    if (interestedPassengers >= 0.1 * passengers.size())
+			    	prob10Per++ ;
+			    if (interestedPassengers >= 0.15 * passengers.size())
+			    	prob15Per++ ;
+			    if (interestedPassengers >= 0.2 * passengers.size())
+			    	prob20Per++ ;
 			    
-			    if(meanVehUtil <= vehUtilThres)
-					vehAddedInIteration *= 0.9;
+				allIterations++;
+	
+				System.out.println(probIteration);
+				
+				bufferedWriter.close();
 			    
-			    System.out.println("It." + k);				
-			}// end of iterations
+				long ProbEndTime = System.currentTimeMillis();
+				System.out.println(probIteration + " Probability iteration execution time: " + (ProbEndTime - ProbStartTime)/ 60000 + " mins");
+			}//end of probability iteration
 			
-			if (interestedPassengers > 0) 
-		    	probability++ ;
-		    if (interestedPassengers >= 0.05 * passengers.size())
-		    	prob5Per++ ;
-		    if (interestedPassengers >= 0.1 * passengers.size())
-		    	prob10Per++ ;
-		    if (interestedPassengers >= 0.15 * passengers.size())
-		    	prob15Per++ ;
-		    if (interestedPassengers >= 0.2 * passengers.size())
-		    	prob20Per++ ;
-		    
-			allIterations++;
-
-			System.out.println(probIteration);
+			double successProb = (double) probability/allIterations * 100;
+			double successProb5 = (double) prob5Per/allIterations * 100;
+			double successProb10 = (double) prob10Per/allIterations * 100;
+			double successProb15 = (double) prob15Per/allIterations * 100;
+			double successProb20 = (double) prob20Per/allIterations * 100;
 			
-			bufferedWriter.close();
-		    
-			long ProbEndTime = System.currentTimeMillis();
-			System.out.println(probIteration + " Probability iteration execution time: " + (ProbEndTime - ProbStartTime)/ 60000 + " mins");
-		}//end of probability iteration
-		
-		double successProb = (double) probability/allIterations * 100;
-		double successProb5 = (double) prob5Per/allIterations * 100;
-		double successProb10 = (double) prob10Per/allIterations * 100;
-		double successProb15 = (double) prob15Per/allIterations * 100;
-		double successProb20 = (double) prob20Per/allIterations * 100;
-		
-		System.out.println(successProb + "%");
-		
-		File plog = new File(mainFolder + "\\YarraRanges_probabilities.csv" ); //outputFile
-		FileWriter pFileWriter = new FileWriter(plog, true);
-		BufferedWriter pBufferedWriter = new BufferedWriter(pFileWriter);
-//		pBufferedWriter.write("Area_sqKm,Population,Population_distribution,Vehicles_added_each_iteration,Vehicles_distribution,Success_probability,Acceptance Threshold%\n");
-		pBufferedWriter.write("1040," + passengers.size() + "," + "unknown"  + "," + v + "," + vehDist 
-				+ "," + successProb + "," + successProb5 + "," + successProb10 + "," + successProb15 +
-				"," + successProb20 + "," + reachMeasure + "\n");
-		pBufferedWriter.close();
-		
-		
-		long endTime = System.currentTimeMillis();
-		System.out.println("Total execution time: " + (endTime - startTime) / 60000 + " mins");
+			System.out.println(successProb + "%");
+			
+			File plog = new File(mainFolder + "\\YarraRanges_probabilities.csv" ); //outputFile
+			FileWriter pFileWriter = new FileWriter(plog, true);
+			BufferedWriter pBufferedWriter = new BufferedWriter(pFileWriter);
+	//		pBufferedWriter.write("Area_sqKm,Population,Population_distribution,Vehicles_added_each_iteration,Vehicles_distribution,Success_probability,Acceptance Threshold%\n");
+			pBufferedWriter.write("1040," + passengers.size() + "," + "unknown"  + "," + vehicleN + "," + vehDist 
+					+ "," + successProb + "," + successProb5 + "," + successProb10 + "," + successProb15 +
+					"," + successProb20 + "," + reachMeasure + "\n");
+			pBufferedWriter.close();
+			
+			
+			long endTime = System.currentTimeMillis();
+			System.out.println("Total execution time: " + (endTime - startTime) / 60000 + " mins");
+		}
 		System.out.println("DONE");
 		Toolkit.getDefaultToolkit().beep();
-	}
+	}//end of main
 		
 
 }

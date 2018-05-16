@@ -1,4 +1,8 @@
-package probabilityCalculation;
+/*=================================================================================================================
+ * This is to investigate the probability of a vehicle-passenger matching system in an artificial environment,
+ * focusing on the critical mass frontier. 
+ =================================================================================================================*/
+package artificialEnvironment;
 
 import java.awt.Point;
 import java.awt.Toolkit;

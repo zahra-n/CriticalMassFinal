@@ -1,4 +1,9 @@
-package probabilityCalculation;
+/*
+ * This class is exactly the same as NormalDistDynamicFleetProb, only with different
+ * distributions. The reason for its creation is to simultaneously run various
+ * simulations. For comments please refer to NormalDistDynamicFleetProb.
+ */
+package artificialEnvironment;
 
 import java.awt.Point;
 import java.awt.Toolkit;
@@ -11,146 +16,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Random;
 
+import extra.Passenger;
+import extra.Vehicle;
 import extra.ZahraUtility;
 
 public class UniformDistDynamicFleetProb {
-	
-	public static class Passenger
-	{
-		int id;
-		public Point coordinate;
-		public double utility;
-		public int neighbour;
-		public int interest;
-		public int mtcheVehID;
-		
-		
-		public Passenger(int id, Point coordinate, double utility, int neighbour, int interest, int mtcheVehID) {
-			super();
-			this.id = id;
-			this.coordinate = coordinate;
-			this.utility = utility;
-			this.neighbour = neighbour;
-			this.interest = interest;
-			this.mtcheVehID = mtcheVehID;
-		}
-		
-		public int getId() {
-			return id;
-		}
-		public void setId(int id) {
-			this.id = id;
-		}
-		public Point getCoordinate() {
-			return coordinate;
-		}
-		public void setCoordinate(Point coordinate) {
-			this.coordinate = coordinate;
-		}
-		public double getUtility() {
-			return utility;
-		}
-		public void setUtility(double utility) {
-			this.utility = utility;
-		}
-
-		public int getNeighbour() {
-			return neighbour;
-		}
-
-		public void setNeighbour(int neighbour) {
-			this.neighbour = neighbour;
-		}
-
-		public int getInterest() {
-			return interest;
-		}
-
-		public void setInterest(int interest) {
-			this.interest = interest;
-		}
-		
-		public int getMtcheVehID() {
-			return mtcheVehID;
-		}
-
-		public void setMtcheVehID(int mtcheVehID) {
-			this.mtcheVehID = mtcheVehID;
-		}
-
-		@Override
-		public String toString() {
-			return  id + "," + coordinate.x + "," + coordinate.y + "," + utility + "," + neighbour + "," + interest;
-		}
-				
-	}
-
-	private static class Vehicle
-	{
-		int id;
-		Point coordinate;
-		double utility;
-		int neighbour;
-		int capacity;
-		
-		
-		public Vehicle(int id, Point coordinate, double utility, int neighbour, int capacity) {
-			super();
-			this.id = id;
-			this.coordinate = coordinate;
-			this.utility = utility;
-			this.neighbour = neighbour;
-			this.capacity = capacity;
-		}
-		
-		public int getId() {
-			return id;
-		}
-		public void setId(int id) {
-			this.id = id;
-		}
-		public Point getCoordinate() {
-			return coordinate;
-		}
-		public void setCoordinate(Point coordinate) {
-			this.coordinate = coordinate;
-		}
-		public double getUtility() {
-			return utility;
-		}
-		public void setUtility(double utility) {
-			this.utility = utility;
-		}
-
-		public int getNeighbour() {
-			return neighbour;
-		}
-
-		public void setNeighbour(int neighbour) {
-			this.neighbour = neighbour;
-		}
-		
-		public int getCapacity() {
-			return capacity;
-		}
-
-		public void setCapacity(int capacity) {
-			this.capacity = capacity;
-		}
-
-		@Override
-		public String toString() {
-			return  id + "," + coordinate.x + "," + coordinate.y + "," + utility + "," + capacity + "," + neighbour;
-		}
-
-//		public double compareTo(Vehicle compareVeh) {
-//			// TODO Auto-generated method stub
-//			
-//			double compareUtil = ((Vehicle) compareVeh) .getUtility();
-//			return (this.utility-compareUtil);
-//		}
-				
-	}
 	/**
 	 * @param args
 	 * @throws IOException 

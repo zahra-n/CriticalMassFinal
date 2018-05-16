@@ -7,7 +7,7 @@ public class Vehicle
 	public int id;
 	public Point coordinate;
 	public double utility;
-	int neighbour;
+	public int neighbour;
 	public int capacity;
 	
 	
